@@ -58,6 +58,10 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == 403 {
+		return nil, errors.New("Forbidden")
+	}
+
 	return c.parseNowTotal(resp.Body)
 }
 
