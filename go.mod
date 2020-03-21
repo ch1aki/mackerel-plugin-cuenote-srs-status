@@ -1,4 +1,4 @@
-module github.com/ch1aki/mackerel-plugin-cuenote-srs
+module github.com/ch1aki/mackerel-plugin-cuenote-srs-status
 
 go 1.13
 
