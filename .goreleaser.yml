@@ -7,9 +7,10 @@ builds:
       - amd64
     ldflags:
      - -X main.Version={{.Version}}
-archive:
-  format: zip
-  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+archives:
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - format: zip
 release:
   github:
     owner: ch1aki
