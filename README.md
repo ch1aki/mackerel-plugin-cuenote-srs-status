@@ -18,6 +18,12 @@ Options:
 - `--group-stats`: Enable Grouped status (default: `false`)
 - `--tempfile=`: Override tempfile path (default: mackerel default)
 
+## Install
+
+```shell
+mkr plugin install ch1aki/mackerel-plugin-cuenote-srs-status@v0.0.1
+```
+
 ## Example of mackerel-agent.conf
 
 ```toml
