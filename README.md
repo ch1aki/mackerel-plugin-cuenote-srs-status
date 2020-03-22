@@ -28,14 +28,14 @@ command = "/path/to/mackerel-plugin-cuenote-srs-status -H srsXXXX.cuenote.jp -u 
 ```toml
 [plugin.metrics.cuenote-srs-status]
 command = "/path/to/mackerel-plugin-cuenote-srs-status -H srsXXXX.cuenote.jp -u xxxx -p xxxxxxxx --group-stats"
-exclude_pattern = 'bounce unique'
+exclude_pattern = 'bounce_unique'
 ```
 
-## cuenote-srs.queue_total
+## cuenote-srs-stat.queue_total
 
-- cuenote-srs.Queue.delivering
-- cuenote-srs.Queue.undelivered
-- cuenote-srs.Queue.resend
+- cuenote-srs-stat.queue_total.delivering
+- cuenote-srs-stat.queue_total.undelivered
+- cuenote-srs-stat.queue_total.resend
 
 ## cuenote-srs.queue_group
 
