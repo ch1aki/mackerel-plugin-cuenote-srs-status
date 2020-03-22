@@ -205,12 +205,12 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 }
 
 type options struct {
-	User             string `short:"u" long:"user" description:"Cuenote SR-S username"`
-	Password         string `short:"p" long:"password" description:"Cuenote SR-S password"`
-	Host             string `short:"H" long:"host" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
+	User             string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
+	Password         string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
+	Host             string `short:"H" long:"host" required:"true" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
 	Prefix           string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
-	Tempfile         string `long:"template" description:"Tempfile name"`
-	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status"`
+	Tempfile         string `long:"tempfile" description:"Tempfile name"`
+	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status (default: false)"`
 }
 
 // Do the plugin
