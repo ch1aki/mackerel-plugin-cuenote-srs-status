@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 
@@ -17,19 +18,30 @@ import (
 
 // CuenoteSrsStatPlugin mackerel plugin for CuenoteSrsStat
 type CuenoteSrsStatPlugin struct {
-	Prefix   string
-	Tempfile string
-	Host     string
-	User     string
-	Password string
+	Prefix           string
+	Tempfile         string
+	Host             string
+	User             string
+	Password         string
+	EnableGroupStats bool
+}
+
+// MetricKeyPrefix interface for PluginWithPrefix
+func (c CuenoteSrsStatPlugin) MetricKeyPrefix() string {
+	if c.Prefix == "" {
+		c.Prefix = "cuenote-srs-stat"
+	}
+	return c.Prefix
 }
 
 // GraphDefinition interface for mackerelplugin
 func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
-	return map[string]mp.Graphs{
-		"cuenote-srs.Queue": {
-			Label: "Cuenote SR-S Queue Status",
-			Unit:  "float",
+	labelPrefix := strings.Title(c.MetricKeyPrefix())
+
+	graphDef := map[string]mp.Graphs{
+		"queue_total": {
+			Label: labelPrefix + " Queue Total Status",
+			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				{Name: "delivering", Label: "delivering", Diff: false, Stacked: false},
 				{Name: "undelivered", Label: "undelivering", Diff: false, Stacked: false},
@@ -37,13 +49,51 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 			},
 		},
 	}
+
+	if c.EnableGroupStats {
+		graphDef = c.addGraphDefGroup(graphDef)
+	}
+
+	return graphDef
 }
 
-// FetchMetrics interface for mackerelplugin
-func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
+func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) map[string]mp.Graphs {
+	types := [...]string{
+		"delivering",
+		"undelivered",
+		"resend",
+		"success",
+		"failure",
+		"dnsfail",
+		"exclusion",
+		"bounce_unique",
+		"canceled",
+		"expired",
+		"deferral",
+		"dnsdeferral",
+		"connfail",
+		"bounce",
+		"exception",
+	}
+	labelPrefix := strings.Title(c.MetricKeyPrefix())
+
+	for _, t := range types {
+		graphdef["queue_group."+t] = mp.Graphs{
+			Label: labelPrefix + " Queue Group Status " + strings.Title(t),
+			Unit:  "integer",
+			Metrics: []mp.Metrics{
+				{Name: "*", Label: "%1", Diff: false},
+			},
+		}
+	}
+
+	return graphdef
+}
+
+func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) {
 	p := url.Values{}
 	p.Add("cmd", "get_stat")
-	p.Add("type", "now_group")
+	p.Add("type", reqType)
 	u := url.URL{Scheme: "https", Host: c.Host, Path: "api", RawQuery: p.Encode()}
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -52,6 +102,19 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 	}
 
 	req.SetBasicAuth(c.User, c.Password)
+
+	return req, nil
+}
+
+// FetchMetrics interface for mackerelplugin
+func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
+	statRet := make(map[string]float64)
+
+	req, err := c.newRequest("now_total")
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -62,7 +125,33 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 		return nil, errors.New("Forbidden")
 	}
 
-	return c.parseNowTotal(resp.Body)
+	statRet, err = c.parseNowTotal(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.EnableGroupStats {
+		reqGroup, err := c.newRequest("now_group")
+		if err != nil {
+			return nil, err
+		}
+
+		respGroup, err := http.DefaultClient.Do(reqGroup)
+		if err != nil {
+			return nil, err
+		}
+
+		groupStat, err := c.parseNowGroup(respGroup.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range groupStat {
+			statRet[k] = v
+		}
+	}
+
+	return statRet, nil
 }
 
 func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64, error) {
@@ -88,12 +177,40 @@ func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64,
 	return stat, nil
 }
 
+func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64, error) {
+	stat := make(map[string]float64)
+	re := regexp.MustCompile(`#?(\S+)\t(\S+)\t([0-9]+)`)
+
+	reader := bufio.NewReader(body)
+	for {
+		line, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		res := re.FindStringSubmatch(string(line))
+		if res == nil || len(res) != 4 {
+			return nil, errors.New("cannnot parse responce")
+		}
+
+		stat["queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
+		if err != nil {
+			return nil, errors.New("cannot get values")
+		}
+	}
+
+	return stat, nil
+}
+
 type options struct {
-	User     string `short:"u" long:"user" description:"Cuenote SR-S username"`
-	Password string `short:"p" long:"password" description:"Cuenote SR-S password"`
-	Host     string `short:"H" long:"host" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
-	Prefix   string `long:"prefix" default:"cuenote-srs-stat" description:"metric key prefix"`
-	Tempfile string `long:"template" description:"Tempfile name"`
+	User             string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
+	Password         string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
+	Host             string `short:"H" long:"host" required:"true" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
+	Prefix           string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
+	Tempfile         string `long:"tempfile" description:"Tempfile name"`
+	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status (default: false)"`
 }
 
 // Do the plugin
@@ -105,10 +222,11 @@ func Do() {
 	}
 
 	c := CuenoteSrsStatPlugin{
-		Prefix:   opts.Prefix,
-		Host:     opts.Host,
-		User:     opts.User,
-		Password: opts.Password,
+		Prefix:           opts.Prefix,
+		Host:             opts.Host,
+		User:             opts.User,
+		Password:         opts.Password,
+		EnableGroupStats: opts.EnableGroupStats,
 	}
 	helper := mp.NewMackerelPlugin(c)
 	helper.Tempfile = opts.Tempfile
