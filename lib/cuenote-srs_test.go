@@ -18,6 +18,15 @@ func TestGraphDefinition(t *testing.T) {
 	}
 }
 
+func TestGraphDefinitionEnableGroup(t *testing.T) {
+	cuenoteSrs := CuenoteSrsStatPlugin{EnableGroupStats: true}
+
+	graphdef := cuenoteSrs.GraphDefinition()
+	if len(graphdef) != 16 {
+		t.Errorf("GetTempfilename: %d should be 16", len(graphdef))
+	}
+}
+
 func TestParseNowTotal(t *testing.T) {
 	var cuenoteSrs CuenoteSrsStatPlugin
 	stub := `delivering	803

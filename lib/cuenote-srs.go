@@ -17,18 +17,19 @@ import (
 
 // CuenoteSrsStatPlugin mackerel plugin for CuenoteSrsStat
 type CuenoteSrsStatPlugin struct {
-	Prefix   string
-	Tempfile string
-	Host     string
-	User     string
-	Password string
+	Prefix           string
+	Tempfile         string
+	Host             string
+	User             string
+	Password         string
+	EnableGroupStats bool
 }
 
 // GraphDefinition interface for mackerelplugin
 func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
-	return map[string]mp.Graphs{
-		"cuenote-srs.Queue": {
-			Label: "Cuenote SR-S Queue Status",
+	graphDef := map[string]mp.Graphs{
+		"cuenote-srs.queue_total": {
+			Label: "Cuenote SR-S Queue Total Status",
 			Unit:  "float",
 			Metrics: []mp.Metrics{
 				{Name: "delivering", Label: "delivering", Diff: false, Stacked: false},
@@ -37,6 +38,44 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 			},
 		},
 	}
+
+	if c.EnableGroupStats {
+		graphDef = c.addGraphDefGroup(graphDef)
+	}
+
+	return graphDef
+}
+
+func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) map[string]mp.Graphs {
+	types := [...]string{
+		"delivering",
+		"undelivered",
+		"resend",
+		"success",
+		"failure",
+		"dnsfail",
+		"exclusion",
+		"bounce_unique",
+		"canceled",
+		"expired",
+		"deferral",
+		"dnsdeferral",
+		"connfail",
+		"bounce",
+		"exception",
+	}
+
+	for _, t := range types {
+		graphdef["cuenote-srs.queue_group_"+t] = mp.Graphs{
+			Label: "Cuenote SR-S Queue Group Status Delivering",
+			Unit:  "float",
+			Metrics: []mp.Metrics{
+				{Name: "*", Label: "%1", Diff: false},
+			},
+		}
+	}
+
+	return graphdef
 }
 
 func (c CuenoteSrsStatPlugin) fetchStat(type_ string) (io.Reader, error) {
@@ -66,12 +105,32 @@ func (c CuenoteSrsStatPlugin) fetchStat(type_ string) (io.Reader, error) {
 
 // FetchMetrics interface for mackerelplugin
 func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
-
+	statRet := make(map[string]float64)
 	body, err := c.fetchStat("now_total")
 	if err != nil {
 		return nil, err
 	}
-	return c.parseNowTotal(body)
+	statRet, err = c.parseNowTotal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.EnableGroupStats {
+		body, err := c.fetchStat("now_total")
+		if err != nil {
+			return nil, err
+		}
+		groupStat, err := c.parseNowGroup(body)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range groupStat {
+			statRet[k] = v
+		}
+	}
+
+	return statRet, nil
 }
 
 func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64, error) {
@@ -125,11 +184,12 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 }
 
 type options struct {
-	User     string `short:"u" long:"user" description:"Cuenote SR-S username"`
-	Password string `short:"p" long:"password" description:"Cuenote SR-S password"`
-	Host     string `short:"H" long:"host" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
-	Prefix   string `long:"prefix" default:"cuenote-srs-stat" description:"metric key prefix"`
-	Tempfile string `long:"template" description:"Tempfile name"`
+	User             string `short:"u" long:"user" description:"Cuenote SR-S username"`
+	Password         string `short:"p" long:"password" description:"Cuenote SR-S password"`
+	Host             string `short:"H" long:"host" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
+	Prefix           string `long:"prefix" default:"cuenote-srs-stat" description:"metric key prefix"`
+	Tempfile         string `long:"template" description:"Tempfile name"`
+	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status"`
 }
 
 // Do the plugin
@@ -141,10 +201,11 @@ func Do() {
 	}
 
 	c := CuenoteSrsStatPlugin{
-		Prefix:   opts.Prefix,
-		Host:     opts.Host,
-		User:     opts.User,
-		Password: opts.Password,
+		Prefix:           opts.Prefix,
+		Host:             opts.Host,
+		User:             opts.User,
+		Password:         opts.Password,
+		EnableGroupStats: opts.EnableGroupStats,
 	}
 	helper := mp.NewMackerelPlugin(c)
 	helper.Tempfile = opts.Tempfile
