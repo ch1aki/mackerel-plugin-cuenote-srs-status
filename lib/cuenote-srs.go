@@ -78,10 +78,10 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 	return graphdef
 }
 
-func (c CuenoteSrsStatPlugin) fetchStat(type_ string) (io.Reader, error) {
+func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) {
 	p := url.Values{}
 	p.Add("cmd", "get_stat")
-	p.Add("type", type_)
+	p.Add("type", reqType)
 	u := url.URL{Scheme: "https", Host: c.Host, Path: "api", RawQuery: p.Encode()}
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -90,6 +90,19 @@ func (c CuenoteSrsStatPlugin) fetchStat(type_ string) (io.Reader, error) {
 	}
 
 	req.SetBasicAuth(c.User, c.Password)
+
+	return req, nil
+}
+
+// FetchMetrics interface for mackerelplugin
+func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
+	statRet := make(map[string]float64)
+
+	req, err := c.newRequest("now_total")
+	if err != nil {
+		return nil, err
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -100,27 +113,23 @@ func (c CuenoteSrsStatPlugin) fetchStat(type_ string) (io.Reader, error) {
 		return nil, errors.New("Forbidden")
 	}
 
-	return resp.Body, nil
-}
-
-// FetchMetrics interface for mackerelplugin
-func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
-	statRet := make(map[string]float64)
-	body, err := c.fetchStat("now_total")
-	if err != nil {
-		return nil, err
-	}
-	statRet, err = c.parseNowTotal(body)
+	statRet, err = c.parseNowTotal(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	if c.EnableGroupStats {
-		body, err := c.fetchStat("now_total")
+		reqGroup, err := c.newRequest("now_group")
 		if err != nil {
 			return nil, err
 		}
-		groupStat, err := c.parseNowGroup(body)
+
+		respGroup, err := http.DefaultClient.Do(reqGroup)
+		if err != nil {
+			return nil, err
+		}
+
+		groupStat, err := c.parseNowGroup(respGroup.Body)
 		if err != nil {
 			return nil, err
 		}
