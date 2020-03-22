@@ -145,10 +145,10 @@ group1	delivering	0
 
 	stat, err := cuenoteSrs.parseNowGroup(cuenoteStat)
 	assert.Nil(t, err)
-	assert.EqualValues(t, reflect.TypeOf(stat["queue_group_undelivered.group1"]).String(), "float64")
-	assert.EqualValues(t, stat["queue_group_undelivered.group1"], 1111)
-	assert.EqualValues(t, reflect.TypeOf(stat["queue_group_resend.bounce"]).String(), "float64")
-	assert.EqualValues(t, stat["queue_group_resend.bounce"], 1212)
-	assert.EqualValues(t, reflect.TypeOf(stat["queue_group_success.relay"]).String(), "float64")
-	assert.EqualValues(t, stat["queue_group_success.relay"], 0)
+	assert.EqualValues(t, reflect.TypeOf(stat["queue_group.undelivered.group1"]).String(), "float64")
+	assert.EqualValues(t, stat["queue_group.undelivered.group1"], 1111)
+	assert.EqualValues(t, reflect.TypeOf(stat["queue_group.resend.bounce"]).String(), "float64")
+	assert.EqualValues(t, stat["queue_group.resend.bounce"], 1212)
+	assert.EqualValues(t, reflect.TypeOf(stat["queue_group.success.relay"]).String(), "float64")
+	assert.EqualValues(t, stat["queue_group.success.relay"], 0)
 }

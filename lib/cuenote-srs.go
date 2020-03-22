@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/jessevdk/go-flags"
 
@@ -25,11 +26,21 @@ type CuenoteSrsStatPlugin struct {
 	EnableGroupStats bool
 }
 
+// MetricKeyPrefix interface for PluginWithPrefix
+func (c CuenoteSrsStatPlugin) MetricKeyPrefix() string {
+	if c.Prefix == "" {
+		c.Prefix = "cuenote-srs-stat"
+	}
+	return c.Prefix
+}
+
 // GraphDefinition interface for mackerelplugin
 func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
+	labelPrefix := strings.Title(c.MetricKeyPrefix())
+
 	graphDef := map[string]mp.Graphs{
-		"cuenote-srs.queue_total": {
-			Label: "Cuenote SR-S Queue Total Status",
+		"queue_total": {
+			Label: labelPrefix + " Queue Total Status",
 			Unit:  "float",
 			Metrics: []mp.Metrics{
 				{Name: "delivering", Label: "delivering", Diff: false, Stacked: false},
@@ -64,10 +75,11 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 		"bounce",
 		"exception",
 	}
+	labelPrefix := strings.Title(c.MetricKeyPrefix())
 
 	for _, t := range types {
-		graphdef["cuenote-srs.queue_group."+t] = mp.Graphs{
-			Label: "Cuenote SR-S Queue Group Status " + t,
+		graphdef["queue_group."+t] = mp.Graphs{
+			Label: labelPrefix + " Queue Group Status " + strings.Title(t),
 			Unit:  "float",
 			Metrics: []mp.Metrics{
 				{Name: "*", Label: "%1", Diff: false},
@@ -183,7 +195,7 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 			return nil, errors.New("cannnot parse responce")
 		}
 
-		stat["cuenote-srs.queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
+		stat["queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
 		if err != nil {
 			return nil, errors.New("cannot get values")
 		}
@@ -196,7 +208,7 @@ type options struct {
 	User             string `short:"u" long:"user" description:"Cuenote SR-S username"`
 	Password         string `short:"p" long:"password" description:"Cuenote SR-S password"`
 	Host             string `short:"H" long:"host" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
-	Prefix           string `long:"prefix" default:"cuenote-srs-stat" description:"metric key prefix"`
+	Prefix           string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
 	Tempfile         string `long:"template" description:"Tempfile name"`
 	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status"`
 }
