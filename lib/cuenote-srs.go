@@ -41,7 +41,7 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 	graphDef := map[string]mp.Graphs{
 		"queue_total": {
 			Label: labelPrefix + " Queue Total Status",
-			Unit:  "float",
+			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				{Name: "delivering", Label: "delivering", Diff: false, Stacked: false},
 				{Name: "undelivered", Label: "undelivering", Diff: false, Stacked: false},
@@ -80,7 +80,7 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 	for _, t := range types {
 		graphdef["queue_group."+t] = mp.Graphs{
 			Label: labelPrefix + " Queue Group Status " + strings.Title(t),
-			Unit:  "float",
+			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				{Name: "*", Label: "%1", Diff: false},
 			},
