@@ -66,8 +66,8 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 	}
 
 	for _, t := range types {
-		graphdef["cuenote-srs.queue_group_"+t] = mp.Graphs{
-			Label: "Cuenote SR-S Queue Group Status Delivering",
+		graphdef["cuenote-srs.queue_group."+t] = mp.Graphs{
+			Label: "Cuenote SR-S Queue Group Status " + t,
 			Unit:  "float",
 			Metrics: []mp.Metrics{
 				{Name: "*", Label: "%1", Diff: false},
@@ -183,7 +183,7 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 			return nil, errors.New("cannnot parse responce")
 		}
 
-		stat["queue_group_"+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
+		stat["cuenote-srs.queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
 		if err != nil {
 			return nil, errors.New("cannot get values")
 		}
