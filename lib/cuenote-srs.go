@@ -39,11 +39,10 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 	}
 }
 
-// FetchMetrics interface for mackerelplugin
-func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
+func (c CuenoteSrsStatPlugin) fetchStat(type_ string) (io.Reader, error) {
 	p := url.Values{}
 	p.Add("cmd", "get_stat")
-	p.Add("type", "now_group")
+	p.Add("type", type_)
 	u := url.URL{Scheme: "https", Host: c.Host, Path: "api", RawQuery: p.Encode()}
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -62,7 +61,17 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 		return nil, errors.New("Forbidden")
 	}
 
-	return c.parseNowTotal(resp.Body)
+	return resp.Body, nil
+}
+
+// FetchMetrics interface for mackerelplugin
+func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
+
+	body, err := c.fetchStat("now_total")
+	if err != nil {
+		return nil, err
+	}
+	return c.parseNowTotal(body)
 }
 
 func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64, error) {
