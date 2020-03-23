@@ -1,6 +1,9 @@
 mackerel-plugin-cuenote-srs-status
 ===
 
+![](https://github.com/ch1aki/mackerel-plugin-cuenote-srs-status/workflows/test/badge.svg)
+![](https://github.com/ch1aki/mackerel-plugin-cuenote-srs-status/workflows/Release/badge.svg)
+
 Cuenote SR-S custom metrics plugin for mackerel.io agent.
 
 ## Synopsis
