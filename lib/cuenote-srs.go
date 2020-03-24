@@ -180,7 +180,7 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 		}
 
 		res := re.FindStringSubmatch(string(line))
-		if res != nil || len(res) == 4 {
+		if res != nil && len(res) == 4 {
 			stat["queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
 			if err != nil {
 				return nil, errors.New("cannot get values")
