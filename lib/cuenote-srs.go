@@ -144,21 +144,22 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 
 func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64, error) {
 	stat := make(map[string]float64)
+	re := regexp.MustCompile(`(delivering|undelivered|resend)\t([0-9]+)`)
 
 	r := bufio.NewReader(body)
-	for _, m := range [...]string{"delivering", "undelivered", "resend"} {
+	for {
 		line, _, err := r.ReadLine()
-		if err != nil {
-			return nil, errors.New("cannot get values")
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
 		}
-		re := regexp.MustCompile(m + "\t([0-9]+)")
 		res := re.FindStringSubmatch(string(line))
-		if res == nil || len(res) != 2 {
-			return nil, errors.New("cannot get values")
-		}
-		stat[m], err = strconv.ParseFloat(res[1], 64)
-		if err != nil {
-			return nil, errors.New("cannot get values")
+		if res != nil && len(res) == 3 {
+			stat[res[1]], err = strconv.ParseFloat(res[2], 64)
+			if err != nil {
+				return nil, errors.New("cannot get values")
+			}
 		}
 	}
 
