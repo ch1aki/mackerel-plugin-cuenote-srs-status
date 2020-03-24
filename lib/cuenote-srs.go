@@ -90,6 +90,7 @@ func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) 
 	}
 
 	req.SetBasicAuth(c.User, c.Password)
+	req.Header.Set("User-Agent", "mackerel-plugin-cuenote-srs-status")
 
 	return req, nil
 }
