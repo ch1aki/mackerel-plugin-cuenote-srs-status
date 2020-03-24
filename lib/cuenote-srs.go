@@ -62,18 +62,6 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 		"delivering",
 		"undelivered",
 		"resend",
-		"success",
-		"failure",
-		"dnsfail",
-		"exclusion",
-		"bounce_unique",
-		"canceled",
-		"expired",
-		"deferral",
-		"dnsdeferral",
-		"connfail",
-		"bounce",
-		"exception",
 	}
 	labelPrefix := strings.Title(c.MetricKeyPrefix())
 
@@ -179,7 +167,7 @@ func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64,
 
 func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64, error) {
 	stat := make(map[string]float64)
-	re := regexp.MustCompile(`#?(\S+)\t(\S+)\t([0-9]+)`)
+	re := regexp.MustCompile(`#?(\S+)\t(delivering|undelivered|resend)\t([0-9]+)`)
 
 	reader := bufio.NewReader(body)
 	for {
@@ -191,13 +179,11 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 		}
 
 		res := re.FindStringSubmatch(string(line))
-		if res == nil || len(res) != 4 {
-			return nil, errors.New("cannnot parse responce")
-		}
-
-		stat["queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
-		if err != nil {
-			return nil, errors.New("cannot get values")
+		if res != nil || len(res) == 4 {
+			stat["queue_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
+			if err != nil {
+				return nil, errors.New("cannot get values")
+			}
 		}
 	}
 

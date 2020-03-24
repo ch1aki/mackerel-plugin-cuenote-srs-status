@@ -37,7 +37,6 @@ command = "/path/to/mackerel-plugin-cuenote-srs-status -H srsXXXX.cuenote.jp -u 
 ```toml
 [plugin.metrics.cuenote-srs-status]
 command = "/path/to/mackerel-plugin-cuenote-srs-status -H srsXXXX.cuenote.jp -u xxxx -p xxxxxxxx --group-stats"
-exclude_pattern = 'bounce_unique'
 ```
 
 ## cuenote-srs-stat.queue_total
@@ -51,15 +50,3 @@ exclude_pattern = 'bounce_unique'
 - cuenote-srs-stat.queue_group.delivering.*
 - cuenote-srs-stat.queue_group.undelivered.*
 - cuenote-srs-stat.queue_group.resend.*
-- cuenote-srs-stat.queue_group.success.*
-- cuenote-srs-stat.queue_group.failure.*
-- cuenote-srs-stat.queue_group.dnsfail.*
-- cuenote-srs-stat.queue_group.exclusion.*
-- cuenote-srs-stat.queue_group.bounce_unique.*
-- cuenote-srs-stat.queue_group.canceled.*
-- cuenote-srs-stat.queue_group.expired.*
-- cuenote-srs-stat.queue_group.deferral.*
-- cuenote-srs-stat.queue_group.dnsdeferral.*
-- cuenote-srs-stat.queue_group.connfail.*
-- cuenote-srs-stat.queue_group.bounce.*
-- cuenote-srs-stat.queue_group.exception.*
