@@ -22,7 +22,7 @@ func TestGraphDefinitionEnableGroup(t *testing.T) {
 	cuenoteSrs := CuenoteSrsStatPlugin{EnableGroupStats: true}
 
 	graphdef := cuenoteSrs.GraphDefinition()
-	if len(graphdef) != 16 {
+	if len(graphdef) != 4 {
 		t.Errorf("GetTempfilename: %d should be 16", len(graphdef))
 	}
 }
@@ -149,6 +149,4 @@ group1	delivering	0
 	assert.EqualValues(t, stat["queue_group.undelivered.group1"], 1111)
 	assert.EqualValues(t, reflect.TypeOf(stat["queue_group.resend.bounce"]).String(), "float64")
 	assert.EqualValues(t, stat["queue_group.resend.bounce"], 1212)
-	assert.EqualValues(t, reflect.TypeOf(stat["queue_group.success.relay"]).String(), "float64")
-	assert.EqualValues(t, stat["queue_group.success.relay"], 0)
 }
