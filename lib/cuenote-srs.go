@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 
@@ -55,6 +56,10 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 		graphDef = c.addGraphDefGroup(graphDef)
 	}
 
+	if c.EnableDeliveryStats {
+		graphDef = c.addGraphDefDelivery(graphDef)
+	}
+
 	return graphDef
 }
 
@@ -69,6 +74,35 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 	for _, t := range types {
 		graphdef["queue_group."+t] = mp.Graphs{
 			Label: labelPrefix + " Queue Group Status " + strings.Title(t),
+			Unit:  "integer",
+			Metrics: []mp.Metrics{
+				{Name: "*", Label: "%1", Diff: false},
+			},
+		}
+	}
+
+	return graphdef
+}
+
+func (c CuenoteSrsStatPlugin) addGraphDefDelivery(graphdef map[string]mp.Graphs) map[string]mp.Graphs {
+	types := [...]string{
+		"success",
+		"failure",
+		"deferral",
+		"dnsdeferral",
+		"connfail",
+		"exception",
+		"dnsfail",
+		"expired",
+		"canceled",
+		"bounce",
+		"exclusion",
+	}
+	labelPrefix := strings.Title(c.MetricKeyPrefix())
+
+	for _, t := range types {
+		graphdef["delivery_group."+t] = mp.Graphs{
+			Label: labelPrefix + " Delivery Group Status " + strings.Title(t),
 			Unit:  "integer",
 			Metrics: []mp.Metrics{
 				{Name: "*", Label: "%1", Diff: false},
@@ -140,6 +174,29 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 		}
 
 		for k, v := range groupStat {
+			statRet[k] = v
+		}
+	}
+
+	if c.EnableDeliveryStats {
+		t := time.Now().Format("200601021504")
+		params := map[string]string{"time": t, "type": "min_group", "cmd": "get_stat"}
+		reqDelivery, err := c.newRequest(params)
+		if err != nil {
+			return nil, err
+		}
+
+		respDelivery, err := http.DefaultClient.Do(reqDelivery)
+		if err != nil {
+			return nil, err
+		}
+
+		deliveryStat, err := c.parseDeliveryGroup(respDelivery.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range deliveryStat {
 			statRet[k] = v
 		}
 	}
