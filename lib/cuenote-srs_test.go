@@ -1,7 +1,6 @@
 package mpcuenotesrs
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -23,6 +22,15 @@ func TestGraphDefinitionEnableGroup(t *testing.T) {
 
 	graphdef := cuenoteSrs.GraphDefinition()
 	if len(graphdef) != 4 {
+		t.Errorf("GetTempfilename: %d should be 16", len(graphdef))
+	}
+}
+
+func TestGraphDefinitionEnableDelivery(t *testing.T) {
+	cuenoteSrs := CuenoteSrsStatPlugin{EnableDeliveryStats: true}
+
+	graphdef := cuenoteSrs.GraphDefinition()
+	if len(graphdef) != 12 {
 		t.Errorf("GetTempfilename: %d should be 16", len(graphdef))
 	}
 }
@@ -49,7 +57,6 @@ exception	0
 	cuenoteStat := strings.NewReader(stub)
 
 	stat, err := cuenoteSrs.parseNowTotal(cuenoteStat)
-	fmt.Println(stat)
 	assert.Nil(t, err)
 	assert.EqualValues(t, reflect.TypeOf(stat["delivering"]).String(), "float64")
 	assert.EqualValues(t, stat["delivering"], 803)
@@ -149,4 +156,43 @@ group1	delivering	0
 	assert.EqualValues(t, stat["queue_group.undelivered.group1"], 1111)
 	assert.EqualValues(t, reflect.TypeOf(stat["queue_group.resend.bounce"]).String(), "float64")
 	assert.EqualValues(t, stat["queue_group.resend.bounce"], 1212)
+}
+
+func TestParseDeliveryGroup(t *testing.T) {
+	var cuenoteSrs CuenoteSrsStatPlugin
+	stub := `
+group1	success	100
+group1	failure	10
+group1	dnsfail	0
+group1	exclusion	0
+group1	bounce_unique	0
+group1	canceled	0
+group1	expired	2
+group1	deferral	58
+group1	dnsdeferral	0
+group1	connfail	0
+group1	bounce	3
+group1	exception	0
+#all	success	100
+#all	failure	0
+#all	dnsfail	0
+#all	exclusion	0
+#all	bounce_unique	0
+#all	canceled	0
+#all	expired	0
+#all	deferral	0
+#all	dnsdeferral	950
+#all	connfail	1459
+#all	bounce	0
+#all	exception	210
+`
+
+	cuenoteStat := strings.NewReader(stub)
+
+	stat, err := cuenoteSrs.parseDeliveryGroup(cuenoteStat)
+	assert.Nil(t, err)
+	assert.EqualValues(t, reflect.TypeOf(stat["delivery_group.success.all"]).String(), "float64")
+	assert.EqualValues(t, stat["delivery_group.success.all"], 100)
+	assert.EqualValues(t, reflect.TypeOf(stat["delivery_group.failure.group1"]).String(), "float64")
+	assert.EqualValues(t, stat["delivery_group.failure.group1"], 10)
 }

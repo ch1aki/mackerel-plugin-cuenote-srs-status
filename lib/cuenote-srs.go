@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jessevdk/go-flags"
 
@@ -18,12 +19,13 @@ import (
 
 // CuenoteSrsStatPlugin mackerel plugin for CuenoteSrsStat
 type CuenoteSrsStatPlugin struct {
-	Prefix           string
-	Tempfile         string
-	Host             string
-	User             string
-	Password         string
-	EnableGroupStats bool
+	Prefix              string
+	Tempfile            string
+	Host                string
+	User                string
+	Password            string
+	EnableGroupStats    bool
+	EnableDeliveryStats bool
 }
 
 // MetricKeyPrefix interface for PluginWithPrefix
@@ -54,6 +56,10 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 		graphDef = c.addGraphDefGroup(graphDef)
 	}
 
+	if c.EnableDeliveryStats {
+		graphDef = c.addGraphDefDelivery(graphDef)
+	}
+
 	return graphDef
 }
 
@@ -78,10 +84,40 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 	return graphdef
 }
 
-func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) {
+func (c CuenoteSrsStatPlugin) addGraphDefDelivery(graphdef map[string]mp.Graphs) map[string]mp.Graphs {
+	types := [...]string{
+		"success",
+		"failure",
+		"deferral",
+		"dnsdeferral",
+		"connfail",
+		"exception",
+		"dnsfail",
+		"expired",
+		"canceled",
+		"bounce",
+		"exclusion",
+	}
+	labelPrefix := strings.Title(c.MetricKeyPrefix())
+
+	for _, t := range types {
+		graphdef["delivery_group."+t] = mp.Graphs{
+			Label: labelPrefix + " Delivery Group Status " + strings.Title(t),
+			Unit:  "integer",
+			Metrics: []mp.Metrics{
+				{Name: "*", Label: "%1", Diff: false},
+			},
+		}
+	}
+
+	return graphdef
+}
+
+func (c CuenoteSrsStatPlugin) newRequest(params map[string]string) (*http.Request, error) {
 	p := url.Values{}
-	p.Add("cmd", "get_stat")
-	p.Add("type", reqType)
+	for k, v := range params {
+		p.Add(k, v)
+	}
 	u := url.URL{Scheme: "https", Host: c.Host, Path: "api", RawQuery: p.Encode()}
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -99,7 +135,8 @@ func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) 
 func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 	statRet := make(map[string]float64)
 
-	req, err := c.newRequest("now_total")
+	params := map[string]string{"type": "now_total", "cmd": "get_stat"}
+	req, err := c.newRequest(params)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +157,8 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 	}
 
 	if c.EnableGroupStats {
-		reqGroup, err := c.newRequest("now_group")
+		params := map[string]string{"type": "now_group", "cmd": "get_stat"}
+		reqGroup, err := c.newRequest(params)
 		if err != nil {
 			return nil, err
 		}
@@ -136,6 +174,29 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 		}
 
 		for k, v := range groupStat {
+			statRet[k] = v
+		}
+	}
+
+	if c.EnableDeliveryStats {
+		t := time.Now().Format("200601021504")
+		params := map[string]string{"time": t, "type": "min_group", "cmd": "get_stat"}
+		reqDelivery, err := c.newRequest(params)
+		if err != nil {
+			return nil, err
+		}
+
+		respDelivery, err := http.DefaultClient.Do(reqDelivery)
+		if err != nil {
+			return nil, err
+		}
+
+		deliveryStat, err := c.parseDeliveryGroup(respDelivery.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range deliveryStat {
 			statRet[k] = v
 		}
 	}
@@ -192,13 +253,39 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 	return stat, nil
 }
 
+func (c CuenoteSrsStatPlugin) parseDeliveryGroup(body io.Reader) (map[string]float64, error) {
+	stat := make(map[string]float64)
+	re := regexp.MustCompile(`#?(\S+)\t(success|failure|deferral|dnsdeferral|connfail|exception|dnsfail|expired|canceled|bounce|exclusion)\t([0-9]+)`)
+
+	reader := bufio.NewReader(body)
+	for {
+		line, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		res := re.FindStringSubmatch(string(line))
+		if res != nil && len(res) == 4 {
+			stat["delivery_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
+			if err != nil {
+				return nil, errors.New("cannot get values")
+			}
+		}
+	}
+
+	return stat, nil
+}
+
 type options struct {
-	User             string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
-	Password         string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
-	Host             string `short:"H" long:"host" required:"true" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
-	Prefix           string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
-	Tempfile         string `long:"tempfile" description:"Tempfile name"`
-	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status (default: false)"`
+	User                string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
+	Password            string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
+	Host                string `short:"H" long:"host" required:"true" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
+	Prefix              string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
+	Tempfile            string `long:"tempfile" description:"Tempfile name"`
+	EnableGroupStats    bool   `long:"group-stats" description:"Enable Grouped status (default: false)"`
+	EnableDeliveryStats bool   `long:"delivery-stats" description:"Enable Delivery status (default: false)"`
 }
 
 // Do the plugin
@@ -210,11 +297,12 @@ func Do() {
 	}
 
 	c := CuenoteSrsStatPlugin{
-		Prefix:           opts.Prefix,
-		Host:             opts.Host,
-		User:             opts.User,
-		Password:         opts.Password,
-		EnableGroupStats: opts.EnableGroupStats,
+		Prefix:              opts.Prefix,
+		Host:                opts.Host,
+		User:                opts.User,
+		Password:            opts.Password,
+		EnableGroupStats:    opts.EnableGroupStats,
+		EnableDeliveryStats: opts.EnableDeliveryStats,
 	}
 	helper := mp.NewMackerelPlugin(c)
 	helper.Tempfile = opts.Tempfile
