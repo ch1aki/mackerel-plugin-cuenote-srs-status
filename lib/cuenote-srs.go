@@ -194,6 +194,26 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 
 func (c CuenoteSrsStatPlugin) parseDeliveryGroup(body io.Reader) (map[string]float64, error) {
 	stat := make(map[string]float64)
+	re := regexp.MustCompile(`#?(\S+)\t(success|failure|deferral|dnsdeferral|connfail|exception|dnsfail|expired|canceled|bounce|exclusion)\t([0-9]+)`)
+
+	reader := bufio.NewReader(body)
+	for {
+		line, _, err := reader.ReadLine()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		res := re.FindStringSubmatch(string(line))
+		if res != nil && len(res) == 4 {
+			stat["delivery_group."+res[2]+"."+res[1]], err = strconv.ParseFloat(res[3], 64)
+			if err != nil {
+				return nil, errors.New("cannot get values")
+			}
+		}
+	}
+
 	return stat, nil
 }
 
