@@ -79,10 +79,11 @@ func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) ma
 	return graphdef
 }
 
-func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) {
+func (c CuenoteSrsStatPlugin) newRequest(params map[string]string) (*http.Request, error) {
 	p := url.Values{}
-	p.Add("cmd", "get_stat")
-	p.Add("type", reqType)
+	for k, v := range params {
+		p.Add(k, v)
+	}
 	u := url.URL{Scheme: "https", Host: c.Host, Path: "api", RawQuery: p.Encode()}
 
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -100,7 +101,8 @@ func (c CuenoteSrsStatPlugin) newRequest(reqType string) (*http.Request, error) 
 func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 	statRet := make(map[string]float64)
 
-	req, err := c.newRequest("now_total")
+	params := map[string]string{"type": "now_total", "cmd": "get_stat"}
+	req, err := c.newRequest(params)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +123,8 @@ func (c CuenoteSrsStatPlugin) FetchMetrics() (map[string]float64, error) {
 	}
 
 	if c.EnableGroupStats {
-		reqGroup, err := c.newRequest("now_group")
+		params := map[string]string{"type": "now_group", "cmd": "get_stat"}
+		reqGroup, err := c.newRequest(params)
 		if err != nil {
 			return nil, err
 		}
