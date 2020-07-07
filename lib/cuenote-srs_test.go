@@ -1,7 +1,6 @@
 package mpcuenotesrs
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -49,7 +48,6 @@ exception	0
 	cuenoteStat := strings.NewReader(stub)
 
 	stat, err := cuenoteSrs.parseNowTotal(cuenoteStat)
-	fmt.Println(stat)
 	assert.Nil(t, err)
 	assert.EqualValues(t, reflect.TypeOf(stat["delivering"]).String(), "float64")
 	assert.EqualValues(t, stat["delivering"], 803)
