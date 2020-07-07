@@ -192,6 +192,11 @@ func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64,
 	return stat, nil
 }
 
+func (c CuenoteSrsStatPlugin) parseDeliveryGroup(body io.Reader) (map[string]float64, error) {
+	stat := make(map[string]float64)
+	return stat, nil
+}
+
 type options struct {
 	User             string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
 	Password         string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
