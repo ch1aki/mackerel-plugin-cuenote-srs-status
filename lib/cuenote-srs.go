@@ -18,12 +18,13 @@ import (
 
 // CuenoteSrsStatPlugin mackerel plugin for CuenoteSrsStat
 type CuenoteSrsStatPlugin struct {
-	Prefix           string
-	Tempfile         string
-	Host             string
-	User             string
-	Password         string
-	EnableGroupStats bool
+	Prefix              string
+	Tempfile            string
+	Host                string
+	User                string
+	Password            string
+	EnableGroupStats    bool
+	EnableDeliveryStats bool
 }
 
 // MetricKeyPrefix interface for PluginWithPrefix
@@ -218,12 +219,13 @@ func (c CuenoteSrsStatPlugin) parseDeliveryGroup(body io.Reader) (map[string]flo
 }
 
 type options struct {
-	User             string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
-	Password         string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
-	Host             string `short:"H" long:"host" required:"true" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
-	Prefix           string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
-	Tempfile         string `long:"tempfile" description:"Tempfile name"`
-	EnableGroupStats bool   `long:"group-stats" description:"Enable Grouped status (default: false)"`
+	User                string `short:"u" long:"user" required:"true" description:"Cuenote SR-S username"`
+	Password            string `short:"p" long:"password" required:"true" description:"Cuenote SR-S password"`
+	Host                string `short:"H" long:"host" required:"true" description:"Cuenote SR-S hostname (e.g. srsXXXX.cuenote.jp)"`
+	Prefix              string `long:"prefix" description:"metric key prefix (default: cuenote-srs-stat)"`
+	Tempfile            string `long:"tempfile" description:"Tempfile name"`
+	EnableGroupStats    bool   `long:"group-stats" description:"Enable Grouped status (default: false)"`
+	EnableDeliveryStats bool   `long:"delivery-stats" description:"Enable Delivery status (default: false)"`
 }
 
 // Do the plugin
@@ -235,11 +237,12 @@ func Do() {
 	}
 
 	c := CuenoteSrsStatPlugin{
-		Prefix:           opts.Prefix,
-		Host:             opts.Host,
-		User:             opts.User,
-		Password:         opts.Password,
-		EnableGroupStats: opts.EnableGroupStats,
+		Prefix:              opts.Prefix,
+		Host:                opts.Host,
+		User:                opts.User,
+		Password:            opts.Password,
+		EnableGroupStats:    opts.EnableGroupStats,
+		EnableDeliveryStats: opts.EnableDeliveryStats,
 	}
 	helper := mp.NewMackerelPlugin(c)
 	helper.Tempfile = opts.Tempfile
