@@ -46,7 +46,7 @@ command = "/path/to/mackerel-plugin-cuenote-srs-status -H srsXXXX.cuenote.jp -u 
 - cuenote-srs-stat.queue_total.undelivered
 - cuenote-srs-stat.queue_total.resend
 
-## cuenote-srs.queue_group
+## cuenote-srs-stat.queue_group
 
 - cuenote-srs-stat.queue_group.delivering.*
 - cuenote-srs-stat.queue_group.undelivered.*
