@@ -21,8 +21,8 @@ func TestGraphDefinitionEnableGroup(t *testing.T) {
 	cuenoteSrs := CuenoteSrsStatPlugin{EnableGroupStats: true}
 
 	graphdef := cuenoteSrs.GraphDefinition()
-	if len(graphdef) != 4 {
-		t.Errorf("GetTempfilename: %d should be 16", len(graphdef))
+	if len(graphdef) != 3 {
+		t.Errorf("GetTempfilename: %d should be 3", len(graphdef))
 	}
 }
 
@@ -31,7 +31,7 @@ func TestGraphDefinitionEnableDelivery(t *testing.T) {
 
 	graphdef := cuenoteSrs.GraphDefinition()
 	if len(graphdef) != 12 {
-		t.Errorf("GetTempfilename: %d should be 16", len(graphdef))
+		t.Errorf("GetTempfilename: %d should be 12", len(graphdef))
 	}
 }
 

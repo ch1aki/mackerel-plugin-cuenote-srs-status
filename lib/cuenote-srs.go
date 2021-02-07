@@ -65,7 +65,6 @@ func (c CuenoteSrsStatPlugin) GraphDefinition() map[string]mp.Graphs {
 
 func (c CuenoteSrsStatPlugin) addGraphDefGroup(graphdef map[string]mp.Graphs) map[string]mp.Graphs {
 	types := [...]string{
-		"delivering",
 		"undelivered",
 		"resend",
 	}
@@ -230,7 +229,7 @@ func (c CuenoteSrsStatPlugin) parseNowTotal(body io.Reader) (map[string]float64,
 
 func (c CuenoteSrsStatPlugin) parseNowGroup(body io.Reader) (map[string]float64, error) {
 	stat := make(map[string]float64)
-	re := regexp.MustCompile(`#?(\S+)\t(delivering|undelivered|resend)\t([0-9]+)`)
+	re := regexp.MustCompile(`#?(\S+)\t(undelivered|resend)\t([0-9]+)`)
 
 	reader := bufio.NewReader(body)
 	for {
